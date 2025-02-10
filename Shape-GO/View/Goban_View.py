@@ -1,9 +1,10 @@
 from time import sleep
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 from matplotlib.widgets import Button
-from math import floor
+import threading
 
 class GobanView:
 
@@ -11,17 +12,14 @@ class GobanView:
         # List to store references to the circles (stones)
         self.preview_stones = []
         self.fix_stones = []
+        self.blue_capt = 0
+        self.red_capt = 0
         self.goban = start_goban
         self.controller = controller
         self.board_size = board_size
 
-        self.fig, self.ax = plt.subplots(figsize=(8, 8))
-        plt.subplots_adjust(bottom=0.15)
-
-        # axis
-        self.ax.set_aspect('equal')
-        self.ax.set_xlim(0, board_size - 1)
-        self.ax.set_ylim(0, board_size - 1)
+        self.fig, self.ax = plt.subplots(figsize=(12, 6))
+        plt.subplots_adjust()
 
         # background
         self._draw_init(start_goban)
@@ -55,31 +53,60 @@ class GobanView:
             self.controller.preview(x, y)
 
     def _draw_init(self, start_goban):
+
         # Board lines
         for i in range(self.board_size):
             self.ax.plot([i, i], [0, self.board_size - 1], color="black")
             self.ax.plot([0, self.board_size - 1], [i, i], color="black")
+
+        border_offset = 0.5
+        self.ax.plot([-border_offset, self.board_size - 1 + border_offset, self.board_size - 1 + border_offset, -border_offset,
+             -border_offset],
+            [-border_offset, -border_offset, self.board_size - 1 + border_offset, self.board_size - 1 + border_offset,
+             -border_offset], color="white", linewidth=2
+        )
+        grid_background = patches.Rectangle(
+            (-border_offset, -border_offset),  # Bottom-left corner of the rectangle
+            self.board_size,  # Width of the rectangle
+            self.board_size,  # Height of the rectangle
+            color="#f5deb3",  # Light brown color
+            zorder=0  # Send to background
+        )
+        self.ax.add_patch(grid_background)
+
+        # axis
+        self.ax.set_aspect('equal')
+        self.ax.set_xlim(-border_offset, self.board_size - 1 + border_offset)
+        self.ax.set_ylim(-border_offset, self.board_size - 1 + border_offset)
+
         # Draw handicap stones
         self.draw_goban(start_goban)
         # place buttons and preview window of the shape
-        ax_button = plt.axes((0.05, 0.9, 0.2, 0.075))  # Position for top-left corner
+        ax_button = plt.axes((0.1, 0.9, 0.1, 0.075))  # Position for bottom-left corner
         self.btn_gen_shape = Button(ax_button, "Generate")
-        self.btn_gen_shape.on_clicked(self._generate_shape)
+        self.btn_gen_shape.on_clicked(self._on_btn)
 
-        ax_button = plt.axes((0.7, 0.9, 0.2, 0.075))  # Position for top-right corner
+        ax_button = plt.axes((0.8, 0.9, 0.1, 0.075))  # Position for bottom-right corner
         self.btn_rot_shape = Button(ax_button, "Rotate")
         self.btn_rot_shape.on_clicked(self._rotate)
 
-        self.text_shape_name = self.ax.text(7, 19, "What will be your shape?", ha="center", fontsize=12, color="black",
+        self.text_shape_name = self.ax.text(9, 20, "What will be your shape?", ha="center", fontsize=12, color="black",
                                             bbox=dict(facecolor="lightgray", edgecolor="black",
                                                       boxstyle="round,pad=0.5"))
+        self.text_red_score = self.ax.text(1, 20, "Red Capt.: 0", ha="center", fontsize=12, color="black",
+                                            bbox=dict(facecolor="lightgray", edgecolor="black",
+                                                      boxstyle="round,pad=0.5"))
+        self.text_blue_score = self.ax.text(17, 20, "Blue Capt.: 0", ha="center", fontsize=12, color="black",
+                                            bbox=dict(facecolor="lightgray", edgecolor="black",
+                                                      boxstyle="round,pad=0.5"))
+        plt.get_current_fig_manager().window.resizable(False, False)
 
     def draw_stone(self, x: int, y: int, color: int):
         # print(f"Drawing a {color} stone @ X:{x} Y:{y}")
         if color:
-            self.ax.add_patch(plt.Circle((x, abs(self.board_size - y - 1)), 0.4, color='red'))
+            self.ax.add_patch(plt.Circle((x, abs(self.board_size - y - 1)), 0.45, color='red', zorder=2))
         else:
-            self.ax.add_patch(plt.Circle((x, abs(self.board_size - y - 1)), 0.4, color='blue'))
+            self.ax.add_patch(plt.Circle((x, abs(self.board_size - y - 1)), 0.45, color='blue',zorder=2))
         self.update()
 
     def draw_goban(self, goban: np.ndarray):
@@ -93,10 +120,11 @@ class GobanView:
             for j in range(self.board_size):
                 if goban[i, j] == 1:
                     # self.stones.append()
-                    self.fix_stones.append(plt.Circle((i, j), 0.4, color='red'))
+                    self.fix_stones.append(plt.Circle((i, j), 0.45, color='red',zorder=2))
+
                 if goban[i, j] == 2:
                     # self.stones.append((i, j))
-                    self.fix_stones.append(plt.Circle((i, j), 0.4, color='blue'))
+                    self.fix_stones.append(plt.Circle((i, j), 0.45, color='blue',zorder=2))
 
         for stone in self.fix_stones:
             self.ax.add_patch(stone)
@@ -111,7 +139,7 @@ class GobanView:
             self.preview_stones = []
 
         circle_color = 'red' if color == 1 else 'blue'
-        self.preview_stones.append(plt.Circle((x, plot_y), 0.4, color=circle_color))
+        self.preview_stones.append(plt.Circle((x, plot_y), 0.45, color=circle_color))
         self.ax.add_patch(self.preview_stones[0])
         self.update()
 
@@ -128,17 +156,24 @@ class GobanView:
         for i in range(row):
             for j in range(col):
                 if shape[i, j] != 0:
-                    self.preview_stones.append(plt.Circle((start_x + j, start_y - i), 0.4, color=circle_color))
+                    self.preview_stones.append(plt.Circle((start_x + j, start_y - i), 0.45, color=circle_color, zorder=2))
 
         for circle in self.preview_stones:
             self.ax.add_patch(circle)
         self.update()
 
     def _generate_shape(self, event):
-        self.text_shape_name.set_text("Loading ...")
-        self.update()
-        sleep(0.5)
+        for i in range(10):
+            self.text_shape_name.set_text("Loading" + "." * (i%5))
+            self.update()
+            sleep(0.1)
+
         self.controller.on_generate()
+
+
+    def _on_btn(self, event):
+        threading.Thread(target=self._generate_shape, args=(event,)).start()
+
 
     def _rotate(self, event):
         self.controller.on_rotate()
@@ -152,3 +187,18 @@ class GobanView:
 
     def start(self):
         plt.show()
+
+    def game_over(self):
+        # TODO -> implement counting algorithm
+        pass
+
+    def update_capt(self, current_player: int, capt: int):
+        if current_player == 1:
+            self.red_capt += capt
+            self.text_red_score.set_text(f"Red Capt.: {self.blue_capt}")
+        else:
+            self.blue_capt += capt
+            self.text_blue_score.set_text(f"Blue Capt.: {self.red_capt}")
+
+            self.update()
+

@@ -43,6 +43,7 @@ class Controller:
             self.generated = False
             self.model.place_shape(self.sel_shape.shape, x, y, self._current_player)
             if self.model.captured(self._current_player):  # valid capture
+                self.go_view.update_capt(self._current_player, self.model.captures)
                 self.go_view.draw_goban(self.model.goban)
             else:
                 self.model.remove_shape(self.sel_shape.shape, x, y)

@@ -74,30 +74,36 @@ class Goban:
 
     def _color_cap(self, groups, own_val):
         cap = False
+        self._nr_of_cap = 0
         for group in groups:
             # check the neighbours of the opposite group and see if it is surrounded by your stones
             if self.check_neighbours(group, val=own_val):
                 for (x, y) in group:
+                    self._nr_of_cap += 1
                     self.goban[x, y] = 0  # remove the stones
                 cap = True
         return cap
 
     def captured(self, curr_player: int):
+        self.captures = 0
+
         # get neighbours of the x and y stones
         black_groups = self._find_groups(1)
         white_groups = self._find_groups(2)
 
         if curr_player == 1:  # Blacks turn
-            self._color_cap(white_groups, own_val=curr_player)
+            if self._color_cap(white_groups, own_val=curr_player):
+                self.captures = self._nr_of_cap
             if self._color_cap(black_groups, own_val=2):
-                return False
+                return False  # self-capture
             else:
                 return True
 
         if curr_player == 2:  # Whites turn
-            self._color_cap(black_groups, own_val=curr_player)
+            if self._color_cap(black_groups, own_val=curr_player):
+                self.captures = self._nr_of_cap
             if self._color_cap(white_groups, own_val=1):
-                return False
+                return False  # self-capture
             else:
                 return True
 

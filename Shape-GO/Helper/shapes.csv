@@ -1,7 +1,6 @@
 ponnuki:[[0,1,0],[1,0,1],[0,1,0]]
 keima/knight:[[1,0,0],[0,0,1]]
 ogeima/large knight:[[1,0,0,0],[0,0,0,1]]
-Very large knight/Daidai-geima:[[1,0,0,0,0],[0,0,0,0,1]]
 kosumi:[[1,0],[0,1]]
 diagonal jump/hazama tobi:[[1,0,0],[0,0,0],[0,0,1]]
 ikken tobi/one-space jump:[[1,0,1]]
